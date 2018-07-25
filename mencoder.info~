@@ -1,0 +1,64 @@
+#
+# created Oct 11, 2009
+
+All theatrical films are encoded with the following settings
+
+mencoder $i -vf crop=w:h:x:y -ovc x264 -x264encopts pass=1:turbo=1:threads=2:bitrate=2000:frameref=3:me=umh:bframes=3:b_pyramid:weight_b:log=2 -aid 128 -oac mp3lame -lameopts br=160 -o /dev/null
+
+mencoder $i -vf crop=w:h:x:y -ovc x264 -x264encopts pass=2:threads=2:bitrate=2000:frameref=6:me=umh:bframes=3:b_pyramid:weight_b:subq=7:partitions=all:8x8dct:log=2 -aid 128 -oac mp3lame -lameopts br=160 -o $i.mp4
+
+I am not sure if threads makes any difference here, but enabling the feature can't hurt.
+**UPDATE: Threads did work, and now I also compile x264 with pthreads, so it will work**
+
+TV series are encoded with the following settings
+
+mencoder $i -vf crop=w:h:x:y -ovc x264 -x264encopts pass=1:turbo=1:threads=2:bitrate=1500:frameref=3:me=umh:bframes=3:b_pyramid:weight_b -aid 128 -oac mp3lame -lameopts br=128 -o /dev/null
+mencoder $i -vf crop=w:h:x:y -ovc x264 -x264encopts pass=2:threads=2:bitrate=1500:frameref=6:me=umh:bframes=3:b_pyramid:weight_b:subq=7:partitions=all:8x8dct -aid 128 -oac mp3lame -lameopts br=128 -o $i.avi
+
+-vf pullup,softskip is used to detelecine. This however makes some scenes jumpy, and is highly noticible.
+I am considering exploring different techniques.
+**UPDATE: The jumpy issue is vlc's, and not the detelecine filter's as the movies play fine in mplayer. Continue using the filter.**
+
+The audio bitrate is also 128 compared to 160 for movies. This will not change. The collective filesize of TV episodes (because there are so many of them) is very large, and needs to be minimized however possible.
+For this reason also, the video bitrate is 1500 compared to 2000 with movies. This change has a noticible but small difference on visual quality, while reducing filesize greatly.
+
+For TV series with a lot of episodes, it is necessary to move the encoded files to a seperate directory, so that they are not reencoded if the process is stopped and then restarted:
+
+for i in *.vob.mp4; do 
+mv -i "$i" "${i%v*mp4}mp4" 
+mv "$i" "${i%v*mp4}mp4" DONE/; done
+
+The aid value for audio can vary, but all but one were 128.
+aid values are found using verbose mode in mplayer
+-vf crop values are found using -vf cropdetect in mplayer
+
+2 pass log files should be kept in case of any mistakes in the options that need to be checked.
+
+As of May 30, movies will be encoded to .mp4 and not to .avi.
+All existing .avi movies will not be reencoded.
+
+If a deinterlacing filter is needed, use -vf pp=li. This is one of the best, and also the fastest deinterlacing filter. -vf yadif offers some noise reduction compared to -vf pp=li, but takes too long to be an effective solution            
+
+LOG:
+mencoder v(0.0.1) Investigated different codecs, used Xvid
+mencoder v(0.1)   Started using x.264 codec with advanced 
+                  options, using 2 passes.
+mencoder v(0.1)   Introduced cropping and deinterlacing/detelecining techniques
+mencoder v(0.2)   Different parameters used for films and for T.V. series.
+mencoder v(0.2.1) Made companion script that dumpfiles T.V. series on multiple discs
+                  with the correct filenames. All film dumpfiles are still done 
+                  by one-line commands
+mencoder v(0.2.2) All encoding parameters are now defined at the beginning of the
+                  mencoder script.
+mencoder v(0.2.3) Beefed up the dvdseries script. ##Still to be tested##
+mencoder v(0.2.4) Tested dvdseries script with film, corrected bugs. T.V. 
+                  series section yet to be tested
+mencoder v(0.2.5) Tightened up dvdrip (dvdseries) script. Corrected log bug in 
+                  mencoder script: ignore ALL 2nd pass bitrate stats created
+                  before 19/07/2008.
+mencoder v(0.2.6) Increased audio volume with -af volume=15 for a gain of 15db
+mencoder v(0.2.7) Removed lower quality handbrake encode
+                  Created basic dvdseries script
+                  Tightened up file names and syntax for cleaner code
+mencoder v(0.2.8) Combined dvdrip and dvdseries scripts into one file and 
+                  tightened syntax

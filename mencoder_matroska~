@@ -1,0 +1,32 @@
+#! /bin/bash
+#
+# created Dec 15, 2009
+
+mplayer dvd:// -v -dumpstream -dumpfile title.vob 
+
+mencoder dvd:// -nosound -ovc frameno -o /dev/null -slang en -vobsubout title
+
+mplayer title.vob -ao pcm:file=audio1.wav -vc dummy -aid 128 -vo null
+normalize-audio audio1.wav
+oggenc -q5 audio1.wav 
+
+# First pass
+mencoder -v\
+         title.vob\
+        -vf crop=720:432:0:76,harddup\
+        -ovc x264 -x264encopts subq=4:bframes=3:b_pyramid:weight_b:turbo=1:pass=1:psnr:bitrate=1000\
+        -oac copy\
+        -of rawvideo\
+        -o title.264
+
+# Second pass
+mencoder -v\
+         title.vob\
+        -vf crop=720:432:0:76,harddup\
+        -ovc x264 -x264encopts subq=6:4x4mv:8x8dct:me=3:frameref=5:bframes=3:b_pyramid:weight_b:pass=2:psnr:bitrate=1000\
+        -oac copy\
+        -of rawvideo\
+        -o title.264
+
+MP4Box -add title.264 title.mp4
+mkvmergo -o title.mkv title.mp4 audio1.ogg title.idx

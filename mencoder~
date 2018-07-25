@@ -1,0 +1,61 @@
+#! /bin/bash
+#
+# created Oct 11, 2009
+
+mkdir DONE
+
+VBITRATE=2000
+ABITRATE=160
+VFOPTION=""
+CROP="crop=720:544:0:16"
+
+for i in *.vob; do
+
+ TIME=`date +%s`
+
+echo "${i%vob*}mp4" "info file" > $i.info
+echo Pass 1 info: >> $i.info
+
+mencoder $i -vf ${VFOPTION}${CROP} -af volume=15 -ovc x264 -x264encopts pass=1:turbo=1:threads=2:bitrate=$VBITRATE:frameref=3:me=umh:bframes=3:b_pyramid:weight_b:log=2 -aid 128 -oac mp3lame -lameopts br=$ABITRATE -o /dev/null | tee temppass1.info
+
+tail -n 3 temppass1.info >> $i.info
+
+ TIME2=`date +%s`
+
+echo >> $i.info
+echo Pass 2 info: >> $i.info
+
+mencoder $i -vf ${VFOPTION}${CROP} -af volume=15 -ovc x264 -x264encopts pass=2:threads=2:bitrate=$VBITRATE:frameref=6:me=umh:bframes=3:b_pyramid:weight_b:subq=7:partitions=all:8x8dct:log=2 -aid 128 -oac mp3lame -lameopts br=$ABITRATE -o $i.mp4 | tee temppass2.info
+
+tail -n 3 temppass2.info >> $i.info
+
+ TIME3=`date +%s`
+
+echo >> $i.info
+echo 1st pass: Time taken=$(( $TIME2 - $TIME )) seconds >> $i.info
+echo 2nd pass: Time taken=$(( $TIME3 - $TIME2 )) seconds >> $i.info
+echo Total encoding time: $(( $TIME3 - $TIME )) seconds >> $i.info
+echo Time and date of completed encoding: `date` >> $i.info
+echo "************************************************" >> $i.info
+
+sed '2,$ d' divx2pass.log >> $i.info
+echo VBITRATE=$VBITRATE >> $i.info
+echo ABITRATE=$ABITRATE >> $i.info
+echo VFOPTION=$VFOPTION >> $i.info
+echo CROP=$CROP >> $i.info
+echo "************************************************" >> $i.info
+echo >> $i.info
+
+handbrake -i $i -L -e x264 -b 300 -B 128 -R 48 -E faac -f mp4 -I -w 320 -m -x level=30:bframes=0:cabac=0:ref=1:vbv-maxrate=768:vbv-bufsize=2000:analyse=all:me=umh:subme=6:no-fast-pskip=1 -o /media/Drive_2/ipod_Movies/$i_ipod.mp4 | tee tempipod.info
+
+mv -i "$i" "DONE/$i"
+mv -i "$i.mp4" "DONE/${i%vob*}mp4"
+mv -i "$i.info" "DONE/${i%vob*}mp4.info"
+mv -i "$i_ipod.mp4" "DONE/${i%.vob*}_ipod.mp4"
+mv -i "tempipod.info" "DONE/tempipod.info"
+
+rm temp*.info
+
+less DONE/${i%vob*}mp4.info >> DONE/${PWD##/*/}.info
+
+done

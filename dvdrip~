@@ -1,0 +1,65 @@
+#! /bin/bash
+#
+# created Jan 21, 2010
+
+FOLDER="/media/Monte/Movies"
+
+echo "Welcome to the dumpfile section of mencoder."
+echo "Movie(1) or TV series(2)?"
+read choice
+
+if [ $choice == 1 ]
+then
+  lsdvd /dev/dvd1
+  echo "Name of film?"
+  read NAME1
+  NAME=`echo $NAME1 | tr " " "_"`
+  echo "Number of title to encode?"
+  read TITLE
+  mkdir $FOLDER/$NAME
+  cd $FOLDER/$NAME
+  nautilus `pwd`
+  mplayer dvd://$TITLE -dumpstream -dumpfile $NAME.vob
+  mencoder -dvd-device /dev/dvd1 dvd:// -nosound -ovc frameno -o /dev/null -slang en -vobsubout ${NAME}
+  echo "The DVD rip is completed"
+  eject /dev/dvd1
+
+elif [ $choice == 2 ]
+then
+  lsdvd /dev/dvd1
+  echo "Name of TV series?"
+  read NAME1
+  NAME=`echo $NAME1 | tr " " "_"`
+  echo "How many episodes?"
+  read eps
+
+  for (( i=0; i<eps; i++ ))
+  do
+    echo Title number $(( i + 1 )):
+    read title[$i]
+  done
+
+  mkdir $FOLDER/$NAME
+  cd $FOLDER/$NAME
+  nautilus $FOLDER/$NAME
+  k=`cat .number`
+  j=${k:-0}
+  echo $j
+  episode=$(( j + 1 ))
+
+  for (( i=0; i<eps; i++ ))
+  do 
+    title=${title[$i]}
+    echo episode=$episode
+    echo ${NAME}_Episode_${episode}.vob
+    mplayer -v dvd://$title -dumpstream -dumpfile ${NAME}_Episode_${episode}.vob
+    mencoder -dvd-device /dev/dvd1 dvd://$title -nosound -ovc frameno -o /dev/null -slang en -vobsubout ${episode}
+    episode1=$episode
+    episode=$(( episode1 + 1 ))
+  done
+  eject /dev/dvd1
+  echo $eps > .number
+
+else
+  echo "You must enter either \"1\" or \"2\""
+fi
